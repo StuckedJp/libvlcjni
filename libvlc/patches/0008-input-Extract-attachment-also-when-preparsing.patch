@@ -1,7 +1,7 @@
-From d2b83c432ec2e05a654e72e885db1c5f96876e9c Mon Sep 17 00:00:00 2001
-Message-ID: <d2b83c432ec2e05a654e72e885db1c5f96876e9c.1783491438.git.robux4@ycbcr.xyz>
-In-Reply-To: <1e4ed1d4abbcfbf02ef80e000ce8ebd841dcf667.1783491438.git.robux4@ycbcr.xyz>
-References: <1e4ed1d4abbcfbf02ef80e000ce8ebd841dcf667.1783491438.git.robux4@ycbcr.xyz>
+From 26c78b55fe4dd19822641873b9eb327a8f0ae299 Mon Sep 17 00:00:00 2001
+Message-ID: <26c78b55fe4dd19822641873b9eb327a8f0ae299.1789040025.git.dcn.mcnamara@gmail.com>
+In-Reply-To: <b9a9bf3a94032721dc6a145ca3ba53686466715b.1789040025.git.dcn.mcnamara@gmail.com>
+References: <b9a9bf3a94032721dc6a145ca3ba53686466715b.1789040025.git.dcn.mcnamara@gmail.com>
 From: =?UTF-8?q?Hugo=20Beauz=C3=A9e-Luyssen?= <hugo@beauzee.fr>
 Date: Fri, 29 Nov 2019 15:41:08 +0100
 Subject: [PATCH 08/20] input: Extract attachment also when preparsing
@@ -948,7 +948,7 @@ index 8db8dd2a07..4c04f79954 100644
              *pi_int = i;
              return VLC_SUCCESS;
 diff --git a/modules/demux/avi/avi.c b/modules/demux/avi/avi.c
-index f05850be0a..25192166a4 100644
+index 7ab6f5c681..bc1f8312a8 100644
 --- a/modules/demux/avi/avi.c
 +++ b/modules/demux/avi/avi.c
 @@ -295,7 +295,7 @@ static void Close ( vlc_object_t * p_this )
@@ -1028,7 +1028,7 @@ index b2606192fc..150cd21796 100644
      std::vector<virtual_segment_c*>  used_vsegments;
      virtual_segment_c                *p_current_vsegment;
 diff --git a/modules/demux/mkv/matroska_segment_parse.cpp b/modules/demux/mkv/matroska_segment_parse.cpp
-index 86819a7fa5..ccd7d09c7d 100644
+index 2f1cfc2d7b..df0c9bb465 100644
 --- a/modules/demux/mkv/matroska_segment_parse.cpp
 +++ b/modules/demux/mkv/matroska_segment_parse.cpp
 @@ -1351,33 +1351,31 @@ void matroska_segment_c::ParseAttachments( KaxAttachments *attachments )
@@ -1084,7 +1084,7 @@ index 86819a7fa5..ccd7d09c7d 100644
      }
  }
 diff --git a/modules/demux/mkv/mkv.cpp b/modules/demux/mkv/mkv.cpp
-index 1b393e8c1f..cb8752aef4 100644
+index 90a5bd5bc5..fd96c26a91 100644
 --- a/modules/demux/mkv/mkv.cpp
 +++ b/modules/demux/mkv/mkv.cpp
 @@ -313,14 +313,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
@@ -1145,10 +1145,10 @@ index 614e02f83e..2b43e8131d 100644
  struct matroska_stream_c
  {
 diff --git a/modules/demux/mp4/mp4.c b/modules/demux/mp4/mp4.c
-index 20c3763479..eaea90230c 100644
+index d40d141354..8733bd0201 100644
 --- a/modules/demux/mp4/mp4.c
 +++ b/modules/demux/mp4/mp4.c
-@@ -123,6 +123,8 @@ struct demux_sys_t
+@@ -124,6 +124,8 @@ struct demux_sys_t
      } hacks;
  
      mp4_fragments_index_t *p_fragsindex;
@@ -1157,7 +1157,7 @@ index 20c3763479..eaea90230c 100644
  };
  
  #define DEMUX_INCREMENT (CLOCK_FREQ / 4) /* How far the pcr will go, each round */
-@@ -799,6 +801,7 @@ static int Open( vlc_object_t * p_this )
+@@ -812,6 +814,7 @@ static int Open( vlc_object_t * p_this )
      p_demux->pf_control = Control;
  
      p_sys->context.i_lastseqnumber = UINT32_MAX;
@@ -1165,7 +1165,7 @@ index 20c3763479..eaea90230c 100644
  
      p_demux->p_sys = p_sys;
  
-@@ -2066,112 +2069,123 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
+@@ -2084,112 +2087,123 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
              input_attachment_t ***ppp_attach = va_arg( args, input_attachment_t*** );
              int *pi_int = va_arg( args, int * );
  
@@ -1376,7 +1376,7 @@ index 20c3763479..eaea90230c 100644
              return VLC_SUCCESS;
          }
  
-@@ -2270,6 +2284,10 @@ static void Close ( vlc_object_t * p_this )
+@@ -2288,6 +2302,10 @@ static void Close ( vlc_object_t * p_this )
          MP4_TrackClean( p_demux->out, &p_sys->track[i_track] );
      free( p_sys->track );
  
@@ -1388,10 +1388,10 @@ index 20c3763479..eaea90230c 100644
  }
  
 diff --git a/modules/demux/mpeg/ts.c b/modules/demux/mpeg/ts.c
-index ecedf59981..e42ab890c9 100644
+index 73b95d0167..6baeb470bc 100644
 --- a/modules/demux/mpeg/ts.c
 +++ b/modules/demux/mpeg/ts.c
-@@ -553,7 +553,7 @@ static int Open( vlc_object_t *p_this )
+@@ -554,7 +554,7 @@ static int Open( vlc_object_t *p_this )
  static void FreeDictAttachment( void *p_value, void *p_obj )
  {
      VLC_UNUSED(p_obj);
@@ -1400,7 +1400,7 @@ index ecedf59981..e42ab890c9 100644
  }
  
  static void Close( vlc_object_t *p_this )
-@@ -1176,7 +1176,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
+@@ -1177,7 +1177,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                                           p_entry; p_entry = p_entry->p_next )
              {
                  msg_Err(p_demux, "GET ATTACHMENT %s", p_entry->psz_key);
@@ -1410,10 +1410,10 @@ index ecedf59981..e42ab890c9 100644
                  if( (*ppp_attach)[*pi_int] )
                      (*pi_int)++;
 diff --git a/modules/demux/ogg.c b/modules/demux/ogg.c
-index 62bcd3158d..177d4cc944 100644
+index 43b0ebf046..8f4b3ee6ba 100644
 --- a/modules/demux/ogg.c
 +++ b/modules/demux/ogg.c
-@@ -835,7 +835,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
+@@ -837,7 +837,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                  return VLC_ENOMEM;
              *pi_int = p_sys->i_attachments;
              for( int i = 0; i < p_sys->i_attachments; i++ )
@@ -1422,7 +1422,7 @@ index 62bcd3158d..177d4cc944 100644
              return VLC_SUCCESS;
          }
  
-@@ -2296,7 +2296,7 @@ static void Ogg_EndOfStream( demux_t *p_demux )
+@@ -2307,7 +2307,7 @@ static void Ogg_EndOfStream( demux_t *p_demux )
      p_ogg->p_meta = NULL;
  
      for(int i=0; i<p_ogg->i_attachments; i++)
@@ -1846,5 +1846,5 @@ index a15ba0d923..8ce2287e45 100644
 +vlc_input_attachment_Hold
 +vlc_input_attachment_Release
 -- 
-2.51.0
+2.43.0
 

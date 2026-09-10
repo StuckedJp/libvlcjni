@@ -1,7 +1,7 @@
-From 9762ebddb17e74ab77301d8570aaad051aafc585 Mon Sep 17 00:00:00 2001
-Message-ID: <9762ebddb17e74ab77301d8570aaad051aafc585.1783491438.git.robux4@ycbcr.xyz>
-In-Reply-To: <1e4ed1d4abbcfbf02ef80e000ce8ebd841dcf667.1783491438.git.robux4@ycbcr.xyz>
-References: <1e4ed1d4abbcfbf02ef80e000ce8ebd841dcf667.1783491438.git.robux4@ycbcr.xyz>
+From c7c3c8e9f67857a58c2072c7a97c29440b34744d Mon Sep 17 00:00:00 2001
+Message-ID: <c7c3c8e9f67857a58c2072c7a97c29440b34744d.1789040025.git.dcn.mcnamara@gmail.com>
+In-Reply-To: <b9a9bf3a94032721dc6a145ca3ba53686466715b.1789040025.git.dcn.mcnamara@gmail.com>
+References: <b9a9bf3a94032721dc6a145ca3ba53686466715b.1789040025.git.dcn.mcnamara@gmail.com>
 From: =?UTF-8?q?Hugo=20Beauz=C3=A9e-Luyssen?= <hugo@beauzee.fr>
 Date: Fri, 29 Mar 2019 10:56:26 +0100
 Subject: [PATCH 03/20] network: tls: Handle errors from older kernels
@@ -51,5 +51,5 @@ index d464cb315f..08e71e53a8 100644
  #else
      tls->writev = vlc_tls_SocketWrite;
 -- 
-2.51.0
+2.43.0
 
