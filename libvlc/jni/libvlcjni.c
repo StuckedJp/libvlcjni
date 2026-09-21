@@ -34,6 +34,10 @@
 
 #include <android/api-level.h>
 
+# include <limits.h>
+# include <time.h>
+# include <fontconfig/fontconfig.h>
+
 #include "libvlcjni-vlcobject.h"
 #include "utils.h"
 #include "std_logger.h"
@@ -479,6 +483,101 @@ jstring Java_org_videolan_libvlc_LibVLC_compiler(JNIEnv* env, jobject thiz)
 jstring Java_org_videolan_libvlc_LibVLC_changeset(JNIEnv* env, jobject thiz)
 {
     return vlcNewStringUTF(env, libvlc_get_changeset());
+}
+
+/* A lock left behind by a process killed mid-scan blocks the cache of that
+ * directory until fontconfig considers it stale, which takes 10 minutes. The
+ * locks we take ourselves are only held for a fraction of a second, so anything
+ * older than this delay is a leftover. */
+#define FONT_CACHE_STALE_DELAY 60 /* seconds */
+
+static bool is_leftover_name(const char *psz_name)
+{
+    const size_t i_len = strlen(psz_name);
+
+    if (i_len > 4 && (!strcmp(psz_name + i_len - 4, ".LCK")
+                   || !strcmp(psz_name + i_len - 4, ".NEW")))
+        return true;
+    return strstr(psz_name, ".TMP-") != NULL;
+}
+
+/* Remove the locks and temporary files left by an interrupted cache build */
+static void clean_font_cache_leftovers(void)
+{
+    const char *psz_home = getenv("HOME");
+    char psz_dir[PATH_MAX];
+
+    if (!psz_home
+     || snprintf(psz_dir, sizeof(psz_dir), "%s/.cache/fontconfig", psz_home)
+        >= (int) sizeof(psz_dir))
+        return;
+
+    DIR *p_dir = opendir(psz_dir);
+    if (!p_dir)
+        return;
+
+    const time_t now = time(NULL);
+    struct dirent *p_entry;
+
+    while ((p_entry = readdir(p_dir)) != NULL)
+    {
+        char psz_path[PATH_MAX];
+        struct stat st;
+
+        if (!is_leftover_name(p_entry->d_name)
+         || snprintf(psz_path, sizeof(psz_path), "%s/%s", psz_dir,
+                     p_entry->d_name) >= (int) sizeof(psz_path)
+         || stat(psz_path, &st) != 0
+         || now - st.st_mtime < FONT_CACHE_STALE_DELAY)
+            continue;
+
+        if (S_ISDIR(st.st_mode) ? rmdir(psz_path) : unlink(psz_path))
+            LOGE("failed to remove font cache leftover %s", p_entry->d_name);
+    }
+    closedir(p_dir);
+}
+
+/* Check that each scanned directory got a valid cache written on disk. This
+ * doesn't use FcDirCacheValid() which would load (and possibly scan) a second
+ * configuration. */
+static jboolean is_font_cache_valid(FcConfig *p_config)
+{
+    FcStrList *p_dirs = FcConfigGetFontDirs(p_config);
+    if (!p_dirs)
+        return JNI_FALSE;
+
+    jboolean b_cached = JNI_TRUE;
+    FcChar8 *psz_dir;
+
+    while ((psz_dir = FcStrListNext(p_dirs)) != NULL)
+    {
+        FcCache *p_cache = FcDirCacheLoad(psz_dir, p_config, NULL);
+        if (!p_cache)
+        {
+            b_cached = JNI_FALSE;
+            break;
+        }
+        FcDirCacheUnload(p_cache);
+    }
+    FcStrListDone(p_dirs);
+
+    return b_cached;
+}
+
+jboolean Java_org_videolan_libvlc_LibVLC_nativeBuildFontCache(JNIEnv *env,
+                                                            jobject thiz)
+{
+    (void) env; (void) thiz;
+    clean_font_cache_leftovers();
+
+    FcConfig *p_config = FcInitLoadConfigAndFonts();
+    if (!p_config)
+        return JNI_FALSE;
+
+    const jboolean b_cached = is_font_cache_valid(p_config);
+    FcConfigDestroy(p_config);
+
+    return b_cached;
 }
 
 void Java_org_videolan_libvlc_LibVLC_nativeSetUserAgent(JNIEnv* env,

@@ -57,6 +57,11 @@ LOCAL_SRC_FILES += libvlcjni-dialog.c
 LOCAL_SRC_FILES += std_logger.c
 LOCAL_C_INCLUDES := $(VLC_SRC_DIR)/include $(VLC_BUILD_DIR)/include
 LOCAL_CFLAGS := -std=c11
+ifneq ($(wildcard $(VLC_CONTRIB)/include/fontconfig/fontconfig.h),)
+# fontconfig is linked statically in libvlc
+LOCAL_C_INCLUDES += $(VLC_CONTRIB)/include
+LOCAL_CFLAGS += -DHAVE_FONTCONFIG
+endif
 LOCAL_LDFLAGS += "-Wl,-z,max-page-size=16384"
 LOCAL_LDFLAGS += "-Wl,--gc-sections"
 LOCAL_LDLIBS := -llog

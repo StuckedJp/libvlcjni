@@ -144,12 +144,30 @@ public class LibVLC extends VLCObject<ILibVLC.Event> implements ILibVLC {
         nativeSetUserAgent(name, http);
     }
 
+    /**
+     * Build the fontconfig font cache.
+     *
+     * The first text renderer created by LibVLC scans all the system fonts,
+     * which can take several seconds. Calling this beforehand writes the cache
+     * on disk so that playback doesn't have to.
+     *
+     * This call is blocking and must not be called from the main thread.
+     *
+     * @return true if the cache is valid on disk, false if it could not be built
+     * or written
+     */
+    public boolean buildFontCache() {
+        return nativeBuildFontCache();
+    }
+
     /* JNI */
     private native void nativeNew(String[] options, String homePath);
 
     private native void nativeRelease();
 
     private native void nativeSetUserAgent(String name, String http);
+
+    private native boolean nativeBuildFontCache();
 
     private static boolean sLoaded = false;
 
