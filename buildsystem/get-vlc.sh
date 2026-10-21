@@ -43,9 +43,24 @@ check_patch_is_applied()
     fi
 }
 
-VLC_TESTED_HASH=84177b2273abc5c4300234e6e18b55a4d2dd5a03
-VLC_REPOSITORY=https://code.videolan.org/videolan/vlc.git
-VLC_BRANCH=3.0.x
+# Fork revisions may already contain the libvlcjni patch series.
+apply_patches()
+{
+    for patch_file in "$PATCHES_DIR"/*.patch; do
+        message_id=$(sed -n 's/^Message-Id: //p' "$patch_file")
+        if [ -n "$message_id" ] &&
+           [ -n "$(git log -1 --format=%H --fixed-strings --grep="$message_id")" ]; then
+            diagnostic "VLC sources: patch already applied: $patch_file"
+        else
+            git am --message-id "$patch_file" || fail "VLC sources: cannot apply $patch_file"
+        fi
+        check_patch_is_applied "$patch_file"
+    done
+}
+
+VLC_TESTED_HASH=91d52f485a799f61c4e699b4fe90ae90287d76c4
+VLC_REPOSITORY=git@github.com:StuckedJp/vlc.git
+VLC_BRANCH=master
 
 RESET=0
 while [ $# -gt 0 ]; do
@@ -96,7 +111,7 @@ if [ ! -d "vlc" ]; then
     git reset --hard ${VLC_TESTED_HASH} || fail "VLC sources: VLC_TESTED_HASH ${VLC_TESTED_HASH} not found"
     diagnostic "VLC sources: applying custom patches"
     # Keep Message-Id inside commits description to track them afterwards
-    git am --message-id $PATCHES_DIR/*.patch || fail "VLC sources: cannot apply custom patches"
+    apply_patches
     cd ..
 else
     diagnostic "VLC source: found sources, leaving untouched"
@@ -106,10 +121,7 @@ if [ "$BYPASS_VLC_SRC_CHECKS" = 1 ]; then
 elif [ $RESET -eq 1 ]; then
     cd vlc
     git reset --hard ${VLC_TESTED_HASH} || fail "VLC sources: VLC_TESTED_HASH ${VLC_TESTED_HASH} not found"
-    for patch_file in $PATCHES_DIR/*.patch; do
-        git am --message-id $patch_file
-        check_patch_is_applied "$patch_file"
-    done
+    apply_patches
     cd ..
 else
     diagnostic "VLC sources: Checking VLC_TESTED_HASH and patches presence"
