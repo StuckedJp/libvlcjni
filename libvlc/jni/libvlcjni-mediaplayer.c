@@ -55,6 +55,9 @@ static const libvlc_event_type_t mp_events[] = {
     libvlc_MediaPlayerSeekableChanged,
     libvlc_MediaPlayerPausableChanged,
     libvlc_MediaPlayerLengthChanged,
+#ifdef LIBVLC_MEDIA_PLAYER_HAS_PROGRAMS
+    libvlc_MediaPlayerProgramChanged,
+#endif
 #ifdef LIBVLC_MEDIA_PLAYER_HAS_RECORDING
     libvlc_MediaPlayerRecordChanged,
 #endif
@@ -99,6 +102,10 @@ MediaPlayer_event_cb(vlcjni_object *p_obj, const libvlc_event_t *p_ev,
 {
     switch (p_ev->type)
     {
+#ifdef LIBVLC_MEDIA_PLAYER_HAS_PROGRAMS
+        case libvlc_MediaPlayerProgramChanged:
+            break;
+#endif
 #if defined(LIBVLC_VERSION_MAJOR) && LIBVLC_VERSION_MAJOR >= 4
         case libvlc_MediaPlayerStopped:
             pthread_mutex_lock(&p_obj->p_sys->stop_lock);
@@ -797,13 +804,55 @@ mediaplayer_tracklist_to_object(JNIEnv *env,
         jobject jtrack = mediaplayer_track_to_object(env, p_track);
 
         if (jtrack)
+        {
             (*env)->SetObjectArrayElement(env, array, i_idx++, jtrack);
+            (*env)->DeleteLocalRef(env, jtrack);
+        }
+        if ((*env)->ExceptionCheck(env))
+            break;
     }
     while ((p_track = p_track->p_next) != NULL);
 
 error:
     libvlc_track_description_list_release(p_first);
     return array;
+}
+
+jobject
+Java_org_videolan_libvlc_MediaPlayer_nativeGetPrograms(JNIEnv *env, jobject thiz)
+{
+#ifdef LIBVLC_MEDIA_PLAYER_HAS_PROGRAMS
+    vlcjni_object *obj = VLCJniObject_getInstance(env, thiz);
+    return obj ? mediaplayer_tracklist_to_object(env,
+        libvlc_media_player_get_programs(obj->u.p_mp)) : NULL;
+#else
+    (void)env; (void)thiz;
+    return NULL;
+#endif
+}
+
+jint
+Java_org_videolan_libvlc_MediaPlayer_nativeGetProgram(JNIEnv *env, jobject thiz)
+{
+#ifdef LIBVLC_MEDIA_PLAYER_HAS_PROGRAMS
+    vlcjni_object *obj = VLCJniObject_getInstance(env, thiz);
+    return obj ? libvlc_media_player_get_program(obj->u.p_mp) : -1;
+#else
+    (void)env; (void)thiz;
+    return -1;
+#endif
+}
+
+jboolean
+Java_org_videolan_libvlc_MediaPlayer_nativeSetProgram(JNIEnv *env, jobject thiz, jint id)
+{
+#ifdef LIBVLC_MEDIA_PLAYER_HAS_PROGRAMS
+    vlcjni_object *obj = VLCJniObject_getInstance(env, thiz);
+    return obj && libvlc_media_player_set_program(obj->u.p_mp, id) == 0;
+#else
+    (void)env; (void)thiz; (void)id;
+    return false;
+#endif
 }
 
 jint

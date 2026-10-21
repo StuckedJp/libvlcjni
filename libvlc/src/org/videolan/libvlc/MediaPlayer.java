@@ -95,6 +95,7 @@ public class MediaPlayer extends VLCObject<MediaPlayer.Event> {
 //        public static final int AudioDevice         = 0x11c;
 //        public static final int ChapterChanged      = 0x11d;
         public static final int RecordChanged       = 0x11e;
+        public static final int ProgramChanged      = 0x11f;
 
         protected Event(int type) {
             super(type);
@@ -1414,6 +1415,7 @@ public class MediaPlayer extends VLCObject<MediaPlayer.Event> {
             case Event.Opening:
             case Event.Buffering:
                 return new Event(eventType, argf1);
+            case Event.ProgramChanged:
             case Event.Playing:
             case Event.Paused:
                 return new Event(eventType);
@@ -1493,6 +1495,15 @@ public class MediaPlayer extends VLCObject<MediaPlayer.Event> {
     private native TrackDescription[] nativeGetVideoTracks();
     private native int nativeGetVideoTrack();
     private native boolean nativeSetVideoTrack(int index);
+    /** Services in the current TS. Null when unavailable or unsupported. */
+    public TrackDescription[] getPrograms() { return nativeGetPrograms(); }
+    public int getProgram() { return nativeGetProgram(); }
+    /** Acceptance only; ProgramChanged reports the resulting selection. */
+    public boolean setProgram(int id) { return nativeSetProgram(id); }
+    private native TrackDescription[] nativeGetPrograms();
+    private native int nativeGetProgram();
+    private native boolean nativeSetProgram(int id);
+
     private native int nativeGetAudioTracksCount();
     private native TrackDescription[] nativeGetAudioTracks();
     private native int nativeGetAudioTrack();
