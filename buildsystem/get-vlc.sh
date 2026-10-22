@@ -60,7 +60,7 @@ apply_patches()
 
 VLC_TESTED_HASH=178fcb4bb548b273f1781dddf922f6505266f9e5
 VLC_REPOSITORY=git@github.com:StuckedJp/vlc.git
-VLC_BRANCH=master
+VLC_BRANCH=3.0.x
 
 RESET=0
 while [ $# -gt 0 ]; do
