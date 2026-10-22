@@ -58,7 +58,7 @@ apply_patches()
     done
 }
 
-VLC_TESTED_HASH=91d52f485a799f61c4e699b4fe90ae90287d76c4
+VLC_TESTED_HASH=178fcb4bb548b273f1781dddf922f6505266f9e5
 VLC_REPOSITORY=git@github.com:StuckedJp/vlc.git
 VLC_BRANCH=master
 
