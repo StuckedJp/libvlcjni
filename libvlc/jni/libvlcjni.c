@@ -378,6 +378,104 @@ void JNI_OnUnload(JavaVM* vm, void* reserved)
 #endif
 }
 
+/* Android doesn't ship any fontconfig configuration. Without one, fontconfig
+ * has no family aliases, and a request for "sans-serif" or "Arial" returns
+ * whichever font of /system/fonts scores best. On some devices that is a font
+ * which isn't suited to text at all, such as Xiaomi's MiClock fonts, which
+ * are thin and have a zero-width space. */
+static const char psz_fonts_conf[] =
+    "<?xml version=\"1.0\"?>\n"
+    "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n"
+    "<fontconfig>\n"
+    "  <dir>/system/fonts</dir>\n"
+    "  <cachedir>~/.cache/fontconfig</cachedir>\n"
+    "  <selectfont><rejectfont>\n"
+    "    <glob>*/MiClock*</glob>\n"
+    "  </rejectfont></selectfont>\n"
+    "  <alias binding=\"same\"><family>sans-serif</family>\n"
+    "    <prefer><family>Roboto</family><family>Noto Sans</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>sans</family>\n"
+    "    <prefer><family>Roboto</family><family>Noto Sans</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>Arial</family>\n"
+    "    <prefer><family>Roboto</family><family>Noto Sans</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>Helvetica</family>\n"
+    "    <prefer><family>Roboto</family><family>Noto Sans</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>serif</family>\n"
+    "    <prefer><family>Noto Serif</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>Times New Roman</family>\n"
+    "    <prefer><family>Noto Serif</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>monospace</family>\n"
+    "    <prefer><family>Droid Sans Mono</family><family>Cutive Mono</family></prefer></alias>\n"
+    "  <alias binding=\"same\"><family>Courier New</family>\n"
+    "    <prefer><family>Droid Sans Mono</family><family>Cutive Mono</family></prefer></alias>\n"
+    "</fontconfig>\n";
+
+/* Check whether the configuration file at psz_path is exactly psz_fonts_conf,
+ * so that it is only written when it's missing or outdated, and not on every
+ * LibVLC instance creation.
+ * One more byte than expected is read, so that a longer file is detected. */
+static bool has_proper_config_file(const char *psz_path)
+{
+    FILE *p_file = fopen(psz_path, "r");
+    if (!p_file)
+        return false;
+
+    char buf[sizeof(psz_fonts_conf)];
+    const size_t i_len = sizeof(psz_fonts_conf) - 1; /* without the '\0' */
+    const size_t i_read = fread(buf, 1, sizeof(buf), p_file);
+    fclose(p_file);
+
+    return i_read == i_len && !memcmp(buf, psz_fonts_conf, i_len);
+}
+
+/* Write our fontconfig configuration in HOME, and tell fontconfig to use it.
+ * Must be called after HOME is set, and before fontconfig is initialized. */
+static void setup_fontconfig(void)
+{
+    const char *psz_home = getenv("HOME");
+    char psz_dir[PATH_MAX], psz_path[PATH_MAX], psz_tmp[PATH_MAX];
+    const size_t i_len = sizeof(psz_fonts_conf) - 1;
+
+    if (!psz_home
+     || snprintf(psz_dir, sizeof(psz_dir), "%s/.config/fontconfig", psz_home)
+        >= (int) sizeof(psz_dir)
+     || snprintf(psz_path, sizeof(psz_path), "%s/fonts.conf", psz_dir)
+        >= (int) sizeof(psz_path)
+     || snprintf(psz_tmp, sizeof(psz_tmp), "%s.tmp", psz_path)
+        >= (int) sizeof(psz_tmp))
+        return;
+
+    if (!has_proper_config_file(psz_path))
+    {
+        char psz_parent[PATH_MAX];
+        snprintf(psz_parent, sizeof(psz_parent), "%s/.config", psz_home);
+        if ((mkdir(psz_parent, 0700) && errno != EEXIST)
+         || (mkdir(psz_dir, 0700) && errno != EEXIST))
+        {
+            LOGE("failed to create %s", psz_dir);
+            return;
+        }
+
+        /* Write then rename, so that another process never reads a partial
+         * configuration */
+        FILE *p_file = fopen(psz_tmp, "w");
+        if (!p_file)
+        {
+            LOGE("failed to write %s", psz_tmp);
+            return;
+        }
+        const bool b_written = fwrite(psz_fonts_conf, 1, i_len, p_file) == i_len;
+        if (fclose(p_file) || !b_written || rename(psz_tmp, psz_path))
+        {
+            LOGE("failed to write %s", psz_path);
+            unlink(psz_tmp);
+            return;
+        }
+    }
+
+    setenv("FONTCONFIG_FILE", psz_path, 1);
+}
+
 void Java_org_videolan_libvlc_LibVLC_nativeNew(JNIEnv *env, jobject thiz,
                                                jobjectArray jstringArray,
                                                jstring jhomePath)
@@ -398,6 +496,7 @@ void Java_org_videolan_libvlc_LibVLC_nativeNew(JNIEnv *env, jobject thiz,
         }
     }
     setenv("VLC_DATA_PATH", "/system/usr/share", 1);
+    setup_fontconfig();
 
     if (jstringArray)
     {
