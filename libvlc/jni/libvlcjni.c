@@ -638,7 +638,10 @@ static void clean_font_cache_leftovers(void)
 
 /* Check that each scanned directory got a valid cache written on disk. This
  * doesn't use FcDirCacheValid() which would load (and possibly scan) a second
- * configuration. */
+ * configuration.
+ * Directories that don't exist or can't be read are skipped: fontconfig never
+ * writes a cache for them, and they would make the cache look invalid on every
+ * device that doesn't have them. */
 static jboolean is_font_cache_valid(FcConfig *p_config)
 {
     FcStrList *p_dirs = FcConfigGetFontDirs(p_config);
@@ -650,6 +653,9 @@ static jboolean is_font_cache_valid(FcConfig *p_config)
 
     while ((psz_dir = FcStrListNext(p_dirs)) != NULL)
     {
+        if (access((const char *) psz_dir, R_OK | X_OK) != 0)
+            continue;
+
         FcCache *p_cache = FcDirCacheLoad(psz_dir, p_config, NULL);
         if (!p_cache)
         {
