@@ -387,7 +387,10 @@ void JNI_OnUnload(JavaVM* vm, void* reserved)
  * /product/fonts can hold extra system fonts. It's listed even though it
  * doesn't exist on every device, fontconfig just skips it. /data/fonts is left
  * out on purpose, as in VLC: it can hold fonts downloaded by the user, which
- * we don't want to use for subtitles. */
+ * we don't want to use for subtitles.
+ *
+ * Bump LibVLC.FONT_CONFIG_VERSION whenever this changes, so that the app
+ * rebuilds the font cache. */
 static const char psz_fonts_conf[] =
     "<?xml version=\"1.0\"?>\n"
     "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n"

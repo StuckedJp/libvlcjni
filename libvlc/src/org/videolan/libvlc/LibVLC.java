@@ -145,6 +145,13 @@ public class LibVLC extends VLCObject<ILibVLC.Event> implements ILibVLC {
     }
 
     /**
+     * Version of the fontconfig configuration used by LibVLC. It changes
+     * whenever the configuration changes, so that a font cache built with an
+     * older one can be rebuilt with {@link #buildFontCache()}.
+     */
+    public static final int FONT_CONFIG_VERSION = 1;
+
+    /**
      * Build the fontconfig font cache.
      *
      * The first text renderer created by LibVLC scans all the system fonts,
