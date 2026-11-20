@@ -382,12 +382,18 @@ void JNI_OnUnload(JavaVM* vm, void* reserved)
  * has no family aliases, and a request for "sans-serif" or "Arial" returns
  * whichever font of /system/fonts scores best. On some devices that is a font
  * which isn't suited to text at all, such as Xiaomi's MiClock fonts, which
- * are thin and have a zero-width space. */
+ * are thin and have a zero-width space.
+ *
+ * /product/fonts can hold extra system fonts. It's listed even though it
+ * doesn't exist on every device, fontconfig just skips it. /data/fonts is left
+ * out on purpose, as in VLC: it can hold fonts downloaded by the user, which
+ * we don't want to use for subtitles. */
 static const char psz_fonts_conf[] =
     "<?xml version=\"1.0\"?>\n"
     "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n"
     "<fontconfig>\n"
     "  <dir>/system/fonts</dir>\n"
+    "  <dir>/product/fonts</dir>\n"
     "  <cachedir>~/.cache/fontconfig</cachedir>\n"
     "  <selectfont><rejectfont>\n"
     "    <glob>*/MiClock*</glob>\n"
